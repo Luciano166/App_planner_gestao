@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planer Gestão V4</title>
+<style>
+*{ box-sizing:border-box; }
+
+body{
+    background:#111;
+    color:white;
+    font-family:Arial,sans-serif;
+    margin:0;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:4px;
+}
+
+.version-tag{
+    text-align:center;
+    font-size:11px;
+    color:#555;
+    margin-bottom:16px;
+}
+
+#login-screen{
+    max-width:320px;
+    margin:80px auto;
+    background:#1d1d1d;
+    padding:32px 24px;
+    border-radius:12px;
+    text-align:center;
+}
+
+#login-screen h2{
+    margin-bottom:8px;
+    font-size:20px;
+}
+
+#login-screen p{
+    font-size:12px;
+    color:#888;
+    margin-bottom:28px;
+    line-height:1.6;
+}
+
+.btn-google{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    background:white;
+    color:#111;
+    border:none;
+    border-radius:8px;
+    padding:13px 20px;
+    font-size:15px;
+    font-weight:bold;
+    cursor:pointer;
+    width:100%;
+    transition:opacity .15s;
+}
+
+.btn-google:hover{ opacity:.9; }
+.btn-google:disabled{ opacity:.5; cursor:not-allowed; }
+
+.btn-google img{
+    width:20px;
+    height:20px;
+}
+
+.login-error{
+    color:#d50000;
+    font-size:12px;
+    margin-top:12px;
+    display:none;
+}
+
+#app-screen{ display:none; }
+
+.top-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.user-badge{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#1d1d1d;
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:12px;
+    color:#aaa;
+}
+
+.user-badge img{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+}
+
+.user-badge span{ color:#00c853; font-weight:bold; }
+
+.btn-logout{
+    background:#333;
+    padding:6px 12px;
+    border:none;
+    border-radius:20px;
+    color:#aaa;
+    font-size:12px;
+    cursor:pointer;
+}
+
+.btn-logout:hover{ background:#444; color:white; }
+
+.month-nav{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:16px;
+    margin-bottom:16px;
+}
+
+.btn-month{
+    background:#333;
+    border:none;
+    color:white;
+    font-size:20px;
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.btn-month:hover{ background:#444; }
+
+#month-label{
+    font-size:15px;
+    font-weight:bold;
+    min-width:140px;
+    text-align:center;
+}
+
+.stats{
+    background:#1d1d1d;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:20px;
+}
+
+.stats-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px 16px;
+}
+
+.stats-grid p{ margin:2px 0; font-size:14px; }
+.stats-full{ margin-top:6px; font-size:14px; }
+
+.sync-status{
+    font-size:11px;
+    color:#555;
+    margin-top:10px;
+}
+
+.sync-status.synced{ color:#00c853; }
+.sync-status.syncing{ color:#ffab00; }
+.sync-status.error{ color:#d50000; }
+.sync-status.offline{ color:#ffab00; }
+
+.weekday-header{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:6px;
+    margin-bottom:6px;
+    text-align:center;
+    font-size:11px;
+    color:#666;
+    font-weight:bold;
+}
+
+.calendar{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:6px;
+}
+
+.day{
+    height:52px;
+    border-radius:8px;
+    background:#333;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    font-size:16px;
+    cursor:pointer;
+    position:relative;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+}
+
+.day:active{ opacity:.7; }
+
+.day.empty{
+    background:transparent;
+    cursor:default;
+    pointer-events:none;
+}
+
+.day.weekend{ opacity:.6; }
+
+.day.today::after{
+    content:'';
+    position:absolute;
+    bottom:4px;
+    width:5px;
+    height:5px;
+    background:white;
+    border-radius:50%;
+    opacity:.5;
+}
+
+.day.loading-pulse{ animation:pulse 1s infinite; }
+
+@keyframes pulse{
+    0%,100%{ opacity:.4; }
+    50%{ opacity:.8; }
+}
+
+.green{ background:#00c853; }
+.red{ background:#d50000; }
+.gray{ background:#555; }
+
+.modal{
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    display:none;
+    background:rgba(0,0,0,.7);
+    justify-content:center;
+    align-items:center;
+    z-index:100;
+}
+
+.modal-content{
+    background:#222;
+    padding:20px;
+    border-radius:10px;
+    width:260px;
+    position:relative;
+    z-index:101;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border:none;
+    border-radius:8px;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    font-size:14px;
+}
+
+button:disabled{ opacity:.5; cursor:not-allowed; }
+
+.btn-green{ background:#00c853; }
+.btn-red{ background:#d50000; }
+.btn-gray{ background:#666; }
+.btn-cancel{ background:#333; font-size:13px; }
+.btn-clear{ background:#222; border:1px solid #444; font-size:12px; color:#aaa; }
+
+@media(max-width:400px){
+    body{ padding:12px; }
+    .day{ height:42px; font-size:13px; border-radius:6px; }
+    .calendar, .weekday-header{ gap:4px; }
+    .weekday-header{ font-size:10px; }
+    .stats-grid{ grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<h1>Planer Gestão</h1>
+<div class="version-tag">V4 · Login Google · Dados na nuvem</div>
+
+<div id="login-screen">
+    <h2>Bem-vindo</h2>
+    <p>Faça login com sua conta Google para acessar seus dados de qualquer dispositivo.</p>
+
+    <button class="btn-google" id="btn-google" onclick="doLoginGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        Entrar com Google
+    </button>
+
+    <div class="login-error" id="login-error">Erro ao fazer login. Tente novamente.</div>
+</div>
+
+<div id="app-screen">
+
+    <div class="top-bar">
+        <div class="user-badge">
+            <img id="user-photo" src="" alt="">
+            <span id="lbl-user"></span>
+        </div>
+        <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+
+    <div class="month-nav">
+        <button class="btn-month" onclick="changeMonth(-1)">‹</button>
+        <div id="month-label"></div>
+        <button class="btn-month" onclick="changeMonth(1)">›</button>
+    </div>
+
+    <div class="stats">
+        <div class="stats-grid">
+            <p>🟩 Greens: <strong id="greens">0</strong></p>
+            <p>🟥 Losses: <strong id="losses">0</strong></p>
+            <p>🎯 Assertividade: <strong id="accuracy">0%</strong></p>
+            <p>⬜ Sem operar: <strong id="skipped">0</strong></p>
+            <p>📈 Melhor sequência: <strong id="best-streak">0</strong></p>
+            <p>📉 Pior sequência: <strong id="worst-streak">0</strong></p>
+        </div>
+        <p class="stats-full">📅 Dias restantes no mês: <strong id="days-left">0</strong></p>
+        <div class="sync-status" id="sync-status">⏳ Conectando...</div>
+    </div>
+
+    <div class="weekday-header">
+        <div>DOM</div><div>SEG</div><div>TER</div>
+        <div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div>
+    </div>
+
+    <div class="calendar" id="calendar"></div>
+</div>
+
+<div class="modal" id="modal" onclick="handleModalBackdrop(event)">
+    <div class="modal-content">
+        <h3 style="margin:0 0 4px">Resultado do Dia <span id="modal-day-label"></span></h3>
+        <button class="btn-green"  onclick="setResult('green')">GREEN</button>
+        <button class="btn-red"    onclick="setResult('red')">LOSS</button>
+        <button class="btn-gray"   onclick="setResult('gray')">NÃO OPEREI</button>
+        <button class="btn-clear"  onclick="setResult(null)">🗑 Limpar dia</button>
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+    </div>
+</div>
+
+<script type="module">
+
+import { initializeApp }     from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged,
+    signOut
+} from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+import {
+    getFirestore,
+    doc,
+    updateDoc,
+    setDoc,
+    onSnapshot,
+    deleteField,
+    enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey:            "AIzaSyCBw77OlGwdwVr6VlvT_chzxT8nr6w53Fc",
+    authDomain:        "gest-banca-ob.firebaseapp.com",
+    projectId:         "gest-banca-ob",
+    storageBucket:     "gest-banca-ob.firebasestorage.app",
+    messagingSenderId: "640843763675",
+    appId:             "1:640843763675:web:ea10961bed2d11ad1621fe"
+};
+
+const fbApp    = initializeApp(firebaseConfig);
+const auth     = getAuth(fbApp);
+const db       = getFirestore(fbApp);
+const provider = new GoogleAuthProvider();
+
+enableIndexedDbPersistence(db).catch(() => {});
+
+let currentUID  = null;
+let viewYear    = 0;
+let viewMonth   = 0;
+let selectedDay = null;
+let results     = {};
+let unsubscribe = null;
+let isSaving    = false;
+
+const MONTHS_PT = [
+    "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+    "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+];
+
+window.addEventListener("online",  () => setSyncStatus("synced",  "✅ Online"));
+window.addEventListener("offline", () => setSyncStatus("offline", "📵 Offline — dados salvos localmente"));
+
+onAuthStateChanged(auth, user => {
+    if(user){
+        currentUID = user.uid;
+        document.getElementById("lbl-user").innerText = user.displayName || user.email;
+        const photo = document.getElementById("user-photo");
+        if(user.photoURL){
+            photo.src = user.photoURL;
+            photo.style.display = "block";
+        } else {
+            photo.style.display = "none";
+        }
+        showApp();
+    } else {
+        currentUID = null;
+        showLogin();
+    }
+});
+
+window.doLoginGoogle = async function(){
+    const btn = document.getElementById("btn-google");
+    const err = document.getElementById("login-error");
+    btn.disabled = true;
+    btn.innerText = "Entrando...";
+    err.style.display = "none";
+    try{
+        await signInWithPopup(auth, provider);
+    } catch(e){
+        console.error(e);
+        err.style.display = "block";
+        btn.disabled = false;
+        btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Entrar com Google`;
+    }
+};
+
+window.doLogout = async function(){
+    if(unsubscribe) unsubscribe();
+    results = {}; selectedDay = null; unsubscribe = null;
+    await signOut(auth);
+};
+
+function showLogin(){
+    document.getElementById("login-screen").style.display = "block";
+    document.getElementById("app-screen").style.display   = "none";
+    const btn = document.getElementById("btn-google");
+    btn.disabled = false;
+    btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Entrar com Google`;
+}
+
+function showApp(){
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app-screen").style.display   = "block";
+    const now = new Date();
+    viewYear  = now.getFullYear();
+    viewMonth = now.getMonth();
+    loadMonth();
+}
+
+window.changeMonth = function(dir){
+    viewMonth += dir;
+    if(viewMonth < 0){  viewMonth = 11; viewYear--; }
+    if(viewMonth > 11){ viewMonth = 0;  viewYear++; }
+    loadMonth();
+};
+
+function loadMonth(){
+    if(unsubscribe) unsubscribe();
+    results = {};
+    setSyncStatus("syncing", "⏳ Carregando...");
+    renderCalendarLoading();
+    const monthKey = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
+    document.getElementById("month-label").innerText = `${MONTHS_PT[viewMonth]} ${viewYear}`;
+    const docRef = doc(db, "usuarios", currentUID, "meses", monthKey);
+    unsubscribe = onSnapshot(
+        docRef,
+        snap => {
+            results = snap.exists() ? (snap.data().days || {}) : {};
+            renderCalendar();
+            updateStats();
+            setSyncStatus("synced", "✅ Sincronizado");
+        },
+        err => {
+            console.error(err);
+            setSyncStatus("error", "❌ Erro de conexão");
+        }
+    );
+}
+
+function renderCalendarLoading(){
+    const calendar = document.getElementById("calendar");
+    calendar.innerHTML = "";
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+    const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+    for(let e = 0; e < firstDay; e++){
+        const empty = document.createElement("div");
+        empty.className = "day empty";
+        calendar.appendChild(empty);
+    }
+    for(let i = 1; i <= daysInMonth; i++){
+        const day = document.createElement("div");
+        day.className = "day loading-pulse";
+        day.innerText = i;
+        calendar.appendChild(day);
+    }
+}
+
+function renderCalendar(){
+    const calendar = document.getElementById("calendar");
+    calendar.innerHTML = "";
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+    const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+    const today       = new Date();
+    const isThisMonth = today.getFullYear() === viewYear && today.getMonth() === viewMonth;
+    for(let e = 0; e < firstDay; e++){
+        const empty = document.createElement("div");
+        empty.className = "day empty";
+        calendar.appendChild(empty);
+    }
+    for(let i = 1; i <= daysInMonth; i++){
+        const day = document.createElement("div");
+        day.className = "day";
+        day.innerText = i;
+        const type = results[String(i)];
+        if(type) day.classList.add(type);
+        const dow = new Date(viewYear, viewMonth, i).getDay();
+        if(dow === 0 || dow === 6) day.classList.add("weekend");
+        if(isThisMonth && i === today.getDate()) day.classList.add("today");
+        day.onclick = () => openModal(day, i);
+        calendar.appendChild(day);
+    }
+}
+
+function openModal(dayEl, dayNum){
+    selectedDay = { el: dayEl, num: dayNum };
+    document.getElementById("modal-day-label").innerText = `— ${dayNum} de ${MONTHS_PT[viewMonth]}`;
+    document.getElementById("modal").style.display = "flex";
+}
+
+window.closeModal = function(){
+    document.getElementById("modal").style.display = "none";
+    selectedDay = null;
+};
+
+window.handleModalBackdrop = function(e){
+    if(e.target === document.getElementById("modal")) closeModal();
+};
+
+window.setResult = async function(type){
+    if(!selectedDay || isSaving) return;
+    isSaving = true;
+    const dayKey = String(selectedDay.num);
+    const dayEl  = selectedDay.el;
+    dayEl.classList.remove("green","red","gray");
+    if(type) dayEl.classList.add(type);
+    closeModal();
+    setSyncStatus("syncing", "⏳ Salvando...");
+    try{
+        const monthKey = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
+        const docRef   = doc(db, "usuarios", currentUID, "meses", monthKey);
+        if(type === null){
+            const del = {};
+            del[`days.${dayKey}`] = deleteField();
+            await updateDoc(docRef, del).catch(() => {});
+            delete results[dayKey];
+        } else {
+            const update = {};
+            update[`days.${dayKey}`] = type;
+            await updateDoc(docRef, update).catch(async () => {
+                await setDoc(docRef, { days: { [dayKey]: type } });
+            });
+            results[dayKey] = type;
+        }
+        updateStats();
+        setSyncStatus("synced", "✅ Sincronizado");
+    } catch(e){
+        console.error(e);
+        setSyncStatus("error", "❌ Erro ao salvar");
+    }
+    isSaving = false;
+};
+
+function updateStats(){
+    let greens = 0, losses = 0, skipped = 0;
+    let bestStreak = 0, worstStreak = 0;
+    let curGreen = 0, curRed = 0;
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+    const today       = new Date();
+    const isThisMonth = today.getFullYear() === viewYear && today.getMonth() === viewMonth;
+    const daysLeft    = isThisMonth ? daysInMonth - today.getDate() + 1 : 0;
+    for(let i = 1; i <= daysInMonth; i++){
+        const r = results[String(i)];
+        if(r === "green"){
+            greens++; curGreen++; curRed = 0;
+            if(curGreen > bestStreak) bestStreak = curGreen;
+        } else if(r === "red"){
+            losses++; curRed++; curGreen = 0;
+            if(curRed > worstStreak) worstStreak = curRed;
+        } else if(r === "gray"){
+            skipped++; curGreen = 0; curRed = 0;
+        } else {
+            curGreen = 0; curRed = 0;
+        }
+    }
+    const total = greens + losses;
+    const acc   = total > 0 ? ((greens/total)*100).toFixed(1) : "0.0";
+    document.getElementById("greens").innerText       = greens;
+    document.getElementById("losses").innerText       = losses;
+    document.getElementById("accuracy").innerText     = acc + "%";
+    document.getElementById("skipped").innerText      = skipped;
+    document.getElementById("best-streak").innerText  = bestStreak;
+    document.getElementById("worst-streak").innerText = worstStreak;
+    document.getElementById("days-left").innerText    = daysLeft;
+}
+
+function setSyncStatus(cls, txt){
+    const el = document.getElementById("sync-status");
+    el.className = "sync-status " + cls;
+    el.innerText = txt;
+}
+
+</script>
+</body>
+</html>
