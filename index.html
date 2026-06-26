@@ -68,11 +68,6 @@ h1{
 .btn-google:hover{ opacity:.9; }
 .btn-google:disabled{ opacity:.5; cursor:not-allowed; }
 
-.btn-google img{
-    width:20px;
-    height:20px;
-}
-
 .login-error{
     color:#d50000;
     font-size:12px;
@@ -167,7 +162,6 @@ h1{
 }
 
 .stats-grid p{ margin:2px 0; font-size:14px; }
-.stats-full{ margin-top:6px; font-size:14px; }
 
 .sync-status{
     font-size:11px;
@@ -301,20 +295,17 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
 <div id="login-screen">
     <h2>Bem-vindo</h2>
     <p>Faça login com sua conta Google para acessar seus dados de qualquer dispositivo.</p>
-
     <button class="btn-google" id="btn-google" onclick="doLoginGoogle()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
         Entrar com Google
     </button>
-
     <div class="login-error" id="login-error">Erro ao fazer login. Tente novamente.</div>
 </div>
 
 <div id="app-screen">
-
     <div class="top-bar">
         <div class="user-badge">
-            <img id="user-photo" src="" alt="">
+            <img id="user-photo" src="" alt="" style="display:none">
             <span id="lbl-user"></span>
         </div>
         <button class="btn-logout" onclick="doLogout()">Sair</button>
@@ -335,7 +326,6 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
             <p>📈 Melhor sequência: <strong id="best-streak">0</strong></p>
             <p>📉 Pior sequência: <strong id="worst-streak">0</strong></p>
         </div>
-        <p class="stats-full">📅 Dias restantes no mês: <strong id="days-left">0</strong></p>
         <div class="sync-status" id="sync-status">⏳ Conectando...</div>
     </div>
 
@@ -360,11 +350,12 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
 
 <script type="module">
 
-import { initializeApp }     from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
 import {
     getAuth,
     GoogleAuthProvider,
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     onAuthStateChanged,
     signOut
 } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
@@ -393,6 +384,7 @@ const db       = getFirestore(fbApp);
 const provider = new GoogleAuthProvider();
 
 enableIndexedDbPersistence(db).catch(() => {});
+getRedirectResult(auth).catch(e => console.error("Redirect error:", e));
 
 let currentUID  = null;
 let viewYear    = 0;
@@ -418,8 +410,6 @@ onAuthStateChanged(auth, user => {
         if(user.photoURL){
             photo.src = user.photoURL;
             photo.style.display = "block";
-        } else {
-            photo.style.display = "none";
         }
         showApp();
     } else {
@@ -432,10 +422,10 @@ window.doLoginGoogle = async function(){
     const btn = document.getElementById("btn-google");
     const err = document.getElementById("login-error");
     btn.disabled = true;
-    btn.innerText = "Entrando...";
+    btn.innerText = "Redirecionando...";
     err.style.display = "none";
     try{
-        await signInWithPopup(auth, provider);
+        await signInWithRedirect(auth, provider);
     } catch(e){
         console.error(e);
         err.style.display = "block";
@@ -594,10 +584,9 @@ function updateStats(){
     let greens = 0, losses = 0, skipped = 0;
     let bestStreak = 0, worstStreak = 0;
     let curGreen = 0, curRed = 0;
+
     const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
-    const today       = new Date();
-    const isThisMonth = today.getFullYear() === viewYear && today.getMonth() === viewMonth;
-    const daysLeft    = isThisMonth ? daysInMonth - today.getDate() + 1 : 0;
+
     for(let i = 1; i <= daysInMonth; i++){
         const r = results[String(i)];
         if(r === "green"){
@@ -607,20 +596,22 @@ function updateStats(){
             losses++; curRed++; curGreen = 0;
             if(curRed > worstStreak) worstStreak = curRed;
         } else if(r === "gray"){
-            skipped++; curGreen = 0; curRed = 0;
+            skipped++;
+            // não quebra sequência
         } else {
             curGreen = 0; curRed = 0;
         }
     }
+
     const total = greens + losses;
     const acc   = total > 0 ? ((greens/total)*100).toFixed(1) : "0.0";
+
     document.getElementById("greens").innerText       = greens;
     document.getElementById("losses").innerText       = losses;
     document.getElementById("accuracy").innerText     = acc + "%";
     document.getElementById("skipped").innerText      = skipped;
     document.getElementById("best-streak").innerText  = bestStreak;
     document.getElementById("worst-streak").innerText = worstStreak;
-    document.getElementById("days-left").innerText    = daysLeft;
 }
 
 function setSyncStatus(cls, txt){
